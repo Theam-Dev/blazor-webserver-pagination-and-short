@@ -1,0 +1,106 @@
+﻿@page "/"
+@using BlazorPagination.Models;
+@using BlazorPagination.Services;
+@using static BlazorPagination.Services.PostServices;
+@using BlazorPagination.Pages.Component;
+
+<h1>To Do List</h1>
+
+<style>
+    .thead-light span {
+        cursor: pointer;
+    }
+
+    .thead-light i {
+        color: darkblue;
+        padding: 5px;
+    }
+</style>
+
+<p>This component demonstrates fetching data from Database.</p>
+
+@if (post == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead class="thead-light">
+            <tr>
+                <th><span @onclick="@(() => Sort("Title"))">Task</span><i class="@(SortIndicator("Title"))"></i></th>
+                <th><span @onclick="@(() => Sort("Body"))">Task</span><i class="@(SortIndicator("Body"))"></i></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in post)
+            {
+                <tr>
+                    <td>@item.Title</td>
+                    <td>@item.Body</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+ <Pager PageIndex=@paginatedList.PageIndex TotalPages=@paginatedList.TotalPages OnClick="PageIndexChanged"
+           HasNextPage=@paginatedList.HasNextPage HasPreviousPage=@paginatedList.HasPreviousPage>
+    </Pager>
+<div>
+  
+</div>
+
+
+@code {
+    PaginatedList<Post> paginatedList = new PaginatedList<Post>();
+    IEnumerable<Post> post;
+    Post taskObject = new Post();
+    string customHeader = string.Empty;
+    [Inject]
+    protected IPostService postService { get; set; }
+    // Page and Sort data
+    int? pageNumber = 1;
+    string currentSortField = "Title";
+    string currentSortOrder = "Asc";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetData();
+    }
+    private async Task GetData()
+    {
+        paginatedList = await postService.GetList(pageNumber, currentSortField, currentSortOrder);
+        post = paginatedList.Items;
+    }
+    public async void PageIndexChanged(int newPageNumber)
+    {
+        if (newPageNumber < 1 || newPageNumber > paginatedList.TotalPages)
+        {
+            return;
+        }
+        pageNumber = newPageNumber;
+        await GetData();
+        StateHasChanged();
+    }
+    private async Task Sort(string sortField)
+    {
+        if (sortField.Equals(currentSortField))
+        {
+            currentSortOrder = currentSortOrder.Equals("Asc") ? "Desc" : "Asc";
+        }
+        else
+        {
+            currentSortField = sortField;
+            currentSortOrder = "Asc";
+        }
+        await GetData();
+    }
+    private string SortIndicator(string sortField)
+    {
+        if (sortField.Equals(currentSortField))
+        {
+            return currentSortOrder.Equals("Asc") ? "fa fa-sort-asc" : "fa fa-sort-desc";
+        }
+        return string.Empty;
+    }
+}
